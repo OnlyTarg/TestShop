@@ -1,4 +1,4 @@
-import 'package:test_shop/providers/product.dart';
+import '../providers/product.dart';
 
 class ProductDummy {
   static List<Product>  loadProducts = [

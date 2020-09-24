@@ -1,31 +1,61 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'file:///C:/Users/onlyt/AndroidStudioProjects/test_shop/lib/providers/product.dart';
-import 'package:test_shop/providers/products.dart';
+
+import '../providers/products.dart';
 
 class ProductDetailScreen extends StatelessWidget {
+  // final String title;
+  // final double price;
+
+  // ProductDetailScreen(this.title, this.price);
   static const routeName = '/product-detail';
-
-  /* final String id;
-  final String title;*/
-
-  /*ProductDetailScreen(this.id, this.title);*/
 
   @override
   Widget build(BuildContext context) {
-    final productId = ModalRoute.of(context).settings.arguments as String;
-    final productsList = Provider.of<Products>(context,listen: false);
-
-
-
-
-    final productsData = productsList.findById(productId);
-
+    final productId =
+    ModalRoute.of(context).settings.arguments as String; // is the id!
+    final loadedProduct = Provider.of<Products>(
+      context,
+      listen: false,
+    ).findById(productId);
     return Scaffold(
       appBar: AppBar(
-        title: Text(productsData.title),
+        title: Text(loadedProduct.title),
       ),
-      //body: ,
+      body: SingleChildScrollView(
+        child: Column(
+          children: <Widget>[
+            Container(
+              height: 300,
+              width: double.infinity,
+              child: Image.network(
+                loadedProduct.imageUrl,
+                fit: BoxFit.cover,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              '\$${loadedProduct.price}',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 20,
+              ),
+            ),
+            SizedBox(
+              height: 10,
+            ),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10),
+              width: double.infinity,
+              child: Text(
+                loadedProduct.description,
+                textAlign: TextAlign.center,
+                softWrap: true,
+              ),
+            )
+          ],
+        ),
+      ),
     );
   }
 }
