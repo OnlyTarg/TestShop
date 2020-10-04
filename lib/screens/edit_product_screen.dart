@@ -13,12 +13,20 @@ class EditProductScreen extends StatefulWidget {
 class _EditProductScreenState extends State<EditProductScreen> {
   final _priceFocusNode = FocusNode();
   final _descriptionFocusNode = FocusNode();
-  final imageUrlControler = TextEditingController();
+  final _imageUrlControler = TextEditingController();
   GlobalKey<FormState> _form1 = GlobalKey<FormState>();
-
-  final imageUrlFocusNode = FocusNode();
-  Map<String, String> _savedProduct = {
+  bool _isInit = true;
+  Map<String, String> _editedProduct = {
     'id': '',
+    'title': '',
+    'description': '',
+    'price': '',
+    'imageUrl': '',
+  };
+
+  final _imageUrlFocusNode = FocusNode();
+  Map<String, String> _savedProduct = {
+    'id' : '',
     'title': '',
     'description': '',
     'price': '',
@@ -27,36 +35,73 @@ class _EditProductScreenState extends State<EditProductScreen> {
 
   @override
   void initState() {
-    imageUrlFocusNode.addListener(_updateImageUrl);
+    _imageUrlFocusNode.addListener(_updateImageUrl);
 
     super.initState();
   }
 
+  @override
+  void didChangeDependencies() {
+    var products = Provider.of<Products>(context);
+
+    print(_isInit.toString());
+    if (_isInit) {
+      String productId = ModalRoute.of(context).settings.arguments as String;
+      var product;
+      if ((product = products.findById(productId)) != null) {
+        _editedProduct = {
+          'id' : product.id.toString(),
+          'title': product.title,
+          'description': product.description,
+          'price': product.price.toString(),
+         // 'imageUrl': ''product.imageUrl,''
+        };
+        _imageUrlControler.text =product.imageUrl;
+      }
+    }
+    _isInit = false;
+    super.didChangeDependencies();
+  }
+
   void _updateImageUrl() {
-    if (!imageUrlFocusNode.hasFocus) {
+    if (!_imageUrlFocusNode.hasFocus) {
       setState(() {});
     }
   }
 
   void saveForm() {
-    _form1.currentState.save();
+    var products = Provider.of<Products>(context);
+
+    if (_form1.currentState.validate()) {
+      _form1.currentState.save();
+      var product = Product(
+          imageUrl: _savedProduct['imageUrl'],
+          price: _savedProduct['price'] != ""
+              ? double.parse(_savedProduct['price'])
+              : 0.0,
+          id: _editedProduct['id'],
+          title: _savedProduct['title'],
+          description: _savedProduct['description']);
+
+
+      products.addProduct(product);
+      Navigator.of(context).pop();
+    }
+    ;
   }
 
   @override
   void dispose() {
-    imageUrlFocusNode.removeListener(_updateImageUrl);
-
+    _imageUrlFocusNode.removeListener(_updateImageUrl);
     _priceFocusNode.dispose();
     _descriptionFocusNode.dispose();
-    imageUrlControler.dispose();
-    imageUrlFocusNode.dispose();
+    _imageUrlControler.dispose();
+    _imageUrlFocusNode.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    var products = Provider.of<Products>(context);
-    //product.addProduct(_savedProduct);
     return Scaffold(
       appBar: AppBar(
         title: Text('Edit product'),
@@ -65,19 +110,12 @@ class _EditProductScreenState extends State<EditProductScreen> {
             child: Icon(Icons.save),
             onPressed: () {
               saveForm();
-              var product = Product(
-                  imageUrl: _savedProduct['imageUrl'],
-                  price: double.parse(_savedProduct['price']),
-                  id: _savedProduct['id'],
-                  title: _savedProduct['title'],
-                  description: _savedProduct['description']);
 
-              products.addProduct(product);
-              print(product.id);
+              /*print(product.id);
               print(product.title);
               print(product.price);
               print(product.imageUrl);
-              print(product.description);
+              print(product.description);*/
             },
           ),
         ],
@@ -85,24 +123,36 @@ class _EditProductScreenState extends State<EditProductScreen> {
       body: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Form(
+          autovalidate: false,
           key: _form1,
           child: ListView(
             children: [
               TextFormField(
+                  initialValue: _editedProduct['title'],
+                  validator: (value) {
+                    if (value.isEmpty) {
+                      return 'Please enter title';
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
                     labelText: 'Title',
                   ),
                   onSaved: (value) {
                     _savedProduct['title'] = value;
                   },
-                  onEditingComplete: () {
-                    print('editing complite');
-                  },
                   textInputAction: TextInputAction.next,
                   onFieldSubmitted: (_) {
                     return FocusScope.of(context).requestFocus(_priceFocusNode);
                   }),
               TextFormField(
+                  initialValue: _editedProduct['price'],
+                  validator: (value) {
+                    if (value.isEmpty) {
+                      return 'Please enter title';
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
                     labelText: 'Price',
                   ),
@@ -110,16 +160,21 @@ class _EditProductScreenState extends State<EditProductScreen> {
                   keyboardType: TextInputType.number,
                   focusNode: _priceFocusNode,
                   onSaved: (value) {
-                    _savedProduct['price'] = value;
+                    value != null ? _savedProduct['price'] = value : '0';
                   },
                   onFieldSubmitted: (_) {
                     return FocusScope.of(context)
                         .requestFocus(_descriptionFocusNode);
+                  }),
+              TextFormField(
+                initialValue: _editedProduct['description'],
+                validator: (value) {
+                  if (value.isEmpty) {
+                    return 'Please enter title';
                   }
 
-                  //focusNode: _priceFocusNode,
-                  ),
-              TextFormField(
+                  return null;
+                },
                 decoration: InputDecoration(
                   labelText: 'Description',
                 ),
@@ -139,23 +194,35 @@ class _EditProductScreenState extends State<EditProductScreen> {
                     margin: EdgeInsets.only(top: 8, right: 10),
                     decoration: BoxDecoration(
                         border: Border.all(width: 1, color: Colors.grey)),
-                    child: imageUrlControler.text.isEmpty
+                    child: _imageUrlControler.text.isEmpty
                         ? Text(DateTime.now().toString())
                         : FittedBox(
                             fit: BoxFit.cover,
-                            child: Image.network(imageUrlControler.text),
+                            child: Image.network(_imageUrlControler.text),
                           ),
                   ),
                   Expanded(
                     child: TextFormField(
+                      //initialValue: _editedProduct['imageUrl'],
+                      validator: (value) {
+                        if (value.isEmpty) {
+                          return 'Please enter title';
+                        }
+                        if (!value.startsWith('http') ||
+                            !value.startsWith('https')) {
+                          return 'Please enter valid Url';
+                        }
+                        return null;
+                      },
                       onSaved: (value) {
                         _savedProduct['imageUrl'] = value;
                       },
                       decoration: InputDecoration(labelText: 'Image URL'),
                       keyboardType: TextInputType.url,
                       textInputAction: TextInputAction.done,
-                      controller: imageUrlControler,
-                      focusNode: imageUrlFocusNode,
+                      //controller: _imageUrlControler,
+                      controller: _imageUrlControler,
+                      focusNode: _imageUrlFocusNode,
                     ),
                   )
                 ],
