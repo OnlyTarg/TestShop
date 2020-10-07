@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import './product.dart';
 
 class Products with ChangeNotifier {
-  List<Product> _items = [
+  bool isInit = false;
+  List<Product> _items = [];
+
+  /*
     Product(
       id: 'p1',
       title: 'Red Shirt',
@@ -36,12 +42,9 @@ class Products with ChangeNotifier {
       imageUrl:
           'https://upload.wikimedia.org/wikipedia/commons/thumb/1/14/Cast-Iron-Pan.jpg/1024px-Cast-Iron-Pan.jpg',
     ),
-  ];
-
-
+  ];*/
 
   List<Product> get items {
-
     return [..._items];
   }
 
@@ -56,22 +59,70 @@ class Products with ChangeNotifier {
     );
   }
 
-
-
-  void addProduct(Product product) {
-    if (product.id != '') {
-      Product editedProduct = findById(product.id);
-      _items.remove(editedProduct);
-      _items.add(product);
-      notifyListeners();
-    } else {
-      _items.add(product);
-      notifyListeners();
-    }
+  Future<void> addProduct(Product product) {
+    const url = 'https://badguys.firebaseio.com/products.json';
+    return http
+        .post(url,
+            body: json.encode({
+              'title': product.title,
+              'description': product.description,
+              'price': product.price,
+              'isfavorite': product.isFavorite,
+              'imageUrl': product.imageUrl,
+            }))
+        .then((result) {
+      if (product.id != '') {
+        Product editedProduct = findById(product.id);
+        _items.remove(editedProduct);
+        _items.add(product);
+        notifyListeners();
+      } else {
+        var newProduct = Product(
+          id: json.decode(result.body)['name'],
+          description: product.description,
+          title: product.title,
+          imageUrl: product.imageUrl,
+          price: product.price,
+          isFavorite: product.isFavorite,
+        );
+        _items.add(newProduct);
+        notifyListeners();
+      }
+    }).then((value) => null);
   }
 
   void removeProduct(Product product) {
     _items.remove(product);
     notifyListeners();
+  }
+
+  Future<void> fetchAndSetProducts() async {
+    const url = 'https://badguys.firebaseio.com/products.json';
+
+    try {
+      final response = await http.get(url);
+      Map extractedData = json.decode(response.body) as Map<String, Object>;
+      extractedData.forEach((key, value) {
+        _items.add(Product(
+          id: key,
+          title: value['title'],
+          price: 25,
+          //double.parse(value['price']),
+          imageUrl: value['imageUrl'],
+          description: value["description"],
+        ));
+      });
+
+      print(_items[1].title);
+      print(_items[1].description);
+      print(_items[1].price);
+      print(_items[1].imageUrl);
+      print(_items[1].id);
+
+      notifyListeners();
+      //final  extractedData = json.decode(response.body) as Map<>
+    } catch (e) {
+      throw e;
+    }
   }
 }
